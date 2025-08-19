@@ -28,8 +28,7 @@ jobs:
 
     - name: Install Python dependencies
       run: |
-        pip install --upgrade pip
-        pip install -r requirements.txt
+          pip install gspread pandas gspread-dataframe selenium
 
     - name: Run scraper
       env:
