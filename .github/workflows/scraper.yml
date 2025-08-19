@@ -32,6 +32,6 @@ jobs:
 
     - name: Run scraper
       env:
-        GSHEETS_KEY_JSON: ${{ secrets.GSHEETS_KEY_JSON }}
+        GSHEETS_KEY_JSON: ${{ secrets.GSHEET_KEY_JSON }}
       run: |
         python github_patent_scraping.py
