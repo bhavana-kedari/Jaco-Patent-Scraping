@@ -30,6 +30,11 @@ jobs:
       run: |
           pip install gspread pandas gspread-dataframe selenium
 
+    - name: Debug env
+      run: |
+          echo "GSHEET_KEY_JSON exists? ${GSHEET_KEY_JSON:+yes}"
+
+
     - name: Run scraper
       env:
         GSHEETS_KEY_JSON: ${{ secrets.GSHEET_KEY_JSON }}
