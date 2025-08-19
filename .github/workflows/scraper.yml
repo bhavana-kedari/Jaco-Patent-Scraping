@@ -34,4 +34,4 @@ jobs:
       env:
         GSHEETS_KEY_JSON: ${{ secrets.GSHEETS_KEY_JSON }}
       run: |
-        python scraper.py
+        python github_patent_scraping.py
