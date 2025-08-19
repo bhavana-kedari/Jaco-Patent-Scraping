@@ -28,11 +28,29 @@ print(f"Search URL from B3: {search_url}")
 # -----------------------------
 # This assumes the Google Patents download CSV URL is known
 # Replace the download button step with direct CSV URL if possible
-csv_url = search_url.replace("/?", "/export/csv?")  # converts to CSV export URL
-response = requests.get(csv_url)
-if response.status_code != 200:
-    raise Exception("Failed to download CSV from Google Patents")
-csv_content = StringIO(response.text)
+download_button = driver.find_element(By.XPATH, '//*[@id="count"]/div[1]/span[2]')
+download_button.click()
+time.sleep(5)  # wait for download to start
+
+timeout = 30
+seconds = 0
+downloaded_file = None
+
+while seconds < timeout:
+    list_of_files = glob.glob(os.path.join(download_dir, "*.csv"))
+    if list_of_files:
+        downloaded_file = max(list_of_files, key=os.path.getctime)
+        break
+    time.sleep(1)
+    seconds += 1
+
+# Move and rename the file
+if downloaded_file:
+    shutil.move(downloaded_file, new_path)
+    print(f"Downloaded file moved and saved as: {new_path}")
+else:
+    print("No downloaded file found after waiting.")
+driver.quit()
 
 # Load CSV into pandas
 df = pd.read_csv(csv_content, header=1)
@@ -107,4 +125,5 @@ for i in pending_rows.index:
 
 driver.quit()
 print("Scraping complete and Google Sheet updated.")
+
 
