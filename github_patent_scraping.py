@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import shutil
 import pandas as pd
 from io import StringIO
 import gspread
@@ -34,6 +35,7 @@ chrome_options.add_argument("--disable-dev-shm-usage")
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
 try:
+    download_dir = tempfile.mkdtemp()
     driver.get(search_url)
     time.sleep(3)
     print("Page title:", driver.title)
@@ -45,17 +47,32 @@ try:
         download_button.click()
         print("Clicked download button, waiting for CSV...")
         time.sleep(3)
-    except NoSuchElementException:
+
+    timeout = 30
+    csv_file = None
+    for _ in range(timeout):
+        files = glob.glob(f"{download_dir}/*.csv")
+        if files:
+            csv_file = files[0]
+            break
+        time.sleep(1)
+    
+    if csv_file:
+        shutil.move(csv_file, "/tmp/patents.csv")  # optional move
+        print(f"CSV downloaded to {csv_file}")
+    else:
+        print("CSV not found in temp folder")
+        except NoSuchElementException:
         print("Download button not found, attempting to scrape table directly")
 
     # Try to grab CSV content from page
-    try:
-        csv_element = driver.find_element(By.TAG_NAME, "pre")  # adjust selector if needed
-        csv_content = csv_element.text
-        df = pd.read_csv(StringIO(csv_content), header=1)
-        print(f"Loaded {len(df)} rows from Google Patents")
-    except NoSuchElementException:
-        raise Exception("CSV content not found on the page")
+    # try:
+    #     csv_element = driver.find_element(By.TAG_NAME, "pre")  # adjust selector if needed
+    #     csv_content = csv_element.text
+    #     df = pd.read_csv(StringIO(csv_content), header=1)
+    #     print(f"Loaded {len(df)} rows from Google Patents")
+    # except NoSuchElementException:
+    #     raise Exception("CSV content not found on the page")
 
 finally:
     driver.quit()
@@ -118,3 +135,4 @@ for i in pending_rows.index:
 
 driver.quit()
 print("Scraping complete and Google Sheet updated.")
+
