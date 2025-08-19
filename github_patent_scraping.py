@@ -15,7 +15,7 @@ from selenium.common.exceptions import NoSuchElementException
 # -----------------------------
 # Google Sheets setup
 # -----------------------------
-gsheets_json = os.environ['GSHEETS_KEY_JSON']
+gsheets_json = os.environ['GSHEET_KEY_JSON']
 gc = gspread.service_account_from_dict(json.loads(gsheets_json))
 
 spreadsheet = gc.open("Patent Scrapes")  # Replace with your sheet name
@@ -107,3 +107,4 @@ for i in pending_rows.index:
 
 driver.quit()
 print("Scraping complete and Google Sheet updated.")
+
