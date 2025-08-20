@@ -23,8 +23,8 @@ gc = gspread.service_account_from_dict(json.loads(gsheets_json))
 
 spreadsheet = gc.open("Patent Scrapes")
 input_sheet = spreadsheet.worksheet("User Input")
-search_url = input_sheet.acell('B12').value
-print(f"Search URL from B12: {search_url}")
+search_url = input_sheet.acell('B13').value
+print(f"Search URL from B13: {search_url}")
 
 # -----------------------------
 # Check existing Results sheet
@@ -160,6 +160,7 @@ for i in pending_rows.index:
 
 driver.quit()
 print("Scraping complete and Google Sheet updated.")
+
 
 
 
