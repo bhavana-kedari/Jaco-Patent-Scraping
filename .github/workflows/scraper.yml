@@ -1,9 +1,10 @@
 name: Patent Scraper
 
 on:
-  workflow_dispatch:   # allows manual triggering
-  schedule:
-    - cron: '0 0 * * *'  # optional: daily at midnight
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   scrape:
