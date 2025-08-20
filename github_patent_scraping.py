@@ -32,7 +32,7 @@ print(f"Search URL from B12: {search_url}")
 try:
     results_sheet = spreadsheet.worksheet("Results")
     df_results = pd.DataFrame(results_sheet.get_all_records())
-    df_results = pd.DataFrame(df_results[1:], columns=data[0]) 
+    df_results = pd.DataFrame(df_results[1:], columns=df_results[0]) 
 except gspread.WorksheetNotFound:
     results_sheet = spreadsheet.add_worksheet(title="Results", rows="1000", cols="12")
     df_results = pd.DataFrame()
@@ -160,6 +160,7 @@ for i in pending_rows.index:
 
 driver.quit()
 print("Scraping complete and Google Sheet updated.")
+
 
 
 
