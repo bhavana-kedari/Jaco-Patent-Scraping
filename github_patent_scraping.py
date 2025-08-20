@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import glob
 import shutil
 import pandas as pd
 from io import StringIO
@@ -27,55 +28,68 @@ print(f"Search URL from B3: {search_url}")
 # -----------------------------
 # Selenium setup
 # -----------------------------
+download_dir = os.path.abspath("downloads")
+os.makedirs(download_dir, exist_ok=True)
+
 chrome_options = Options()
-chrome_options.add_argument("--headless")
+chrome_options.add_argument("--headless=new")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
+prefs = {
+    "download.default_directory": download_dir,
+    "download.prompt_for_download": False,
+    "download.directory_upgrade": True,
+    "safebrowsing.enabled": True
+}
+chrome_options.add_experimental_option("prefs", prefs)
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
+# -----------------------------
+# Open search page and click CSV download
+# -----------------------------
+driver.get(search_url)
+time.sleep(3)
+print("Page title:", driver.title)
+print("Current URL:", driver.current_url)
+
+csv_file = None
 try:
-    download_dir = tempfile.mkdtemp()
-    driver.get(search_url)
-    time.sleep(3)
-    print("Page title:", driver.title)
-    print("Current URL:", driver.current_url)
+    download_button = driver.find_element(By.XPATH, '//*[@id="count"]/div[1]/span[2]')
+    download_button.click()
+    print("Clicked download button, waiting for CSV...")
 
-    # Attempt to click download button (if present)
-    try:
-        download_button = driver.find_element(By.XPATH, '//*[@id="count"]/div[1]/span[2]')
-        download_button.click()
-        print("Clicked download button, waiting for CSV...")
-        time.sleep(3)
-
+    # wait for file to appear
     timeout = 30
-    csv_file = None
     for _ in range(timeout):
         files = glob.glob(f"{download_dir}/*.csv")
         if files:
             csv_file = files[0]
             break
         time.sleep(1)
-    
+
     if csv_file:
-        shutil.move(csv_file, "/tmp/patents.csv")  # optional move
-        print(f"CSV downloaded to {csv_file}")
+        print(f"CSV downloaded: {csv_file}")
     else:
-        print("CSV not found in temp folder")
-        except NoSuchElementException:
-        print("Download button not found, attempting to scrape table directly")
+        print("CSV file not found after waiting")
+        raise Exception("CSV download failed")
 
-    # Try to grab CSV content from page
-    # try:
-    #     csv_element = driver.find_element(By.TAG_NAME, "pre")  # adjust selector if needed
-    #     csv_content = csv_element.text
-    #     df = pd.read_csv(StringIO(csv_content), header=1)
-    #     print(f"Loaded {len(df)} rows from Google Patents")
-    # except NoSuchElementException:
-    #     raise Exception("CSV content not found on the page")
-
-finally:
+except NoSuchElementException:
+    print("Download button not found. Cannot download CSV automatically.")
     driver.quit()
+    raise Exception("No download button on page")
+
+driver.quit()
+
+# -----------------------------
+# Load CSV into pandas
+# -----------------------------
+df = pd.read_csv(csv_file, header=1)
+if 'representative figure link' in df.columns:
+    df = df.drop(columns='representative figure link')
+
+df['abstract'] = df.get('abstract', '')
+df['claim1'] = df.get('claim1', '')
 
 # -----------------------------
 # Prepare Google Sheet "Results"
@@ -85,15 +99,14 @@ try:
 except gspread.WorksheetNotFound:
     results_sheet = spreadsheet.add_worksheet(title="Results", rows="1000", cols="20")
 
-# Initialize dataframe in sheet if empty
 if results_sheet.row_count <= 1:
     set_with_dataframe(results_sheet, df)
 
 # -----------------------------
-# Selenium scraping loop for abstract and claim
+# Selenium scraping for abstract & claim1
 # -----------------------------
 chrome_options = Options()
-chrome_options.add_argument("--headless")
+chrome_options.add_argument("--headless=new")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
@@ -110,14 +123,12 @@ for i in pending_rows.index:
         time.sleep(2)
         print(f"Processing row {i+1}/{len(df)} | URL: {url} | Page title: {driver.title}")
 
-        # Abstract
         try:
             abstract = driver.find_element(By.XPATH, abstract_xpath).text
         except NoSuchElementException:
             abstract = ''
             print(f"Abstract not found for row {i}")
 
-        # Claim 1
         try:
             claim1 = driver.find_element(By.XPATH, claim_xpath).text
         except NoSuchElementException:
@@ -127,7 +138,7 @@ for i in pending_rows.index:
         df.at[i, 'abstract'] = abstract
         df.at[i, 'claim1'] = claim1
 
-        # Push to Google Sheet incrementally
+        # Incrementally update Google Sheet
         set_with_dataframe(results_sheet, df)
 
     except Exception as e:
@@ -135,4 +146,3 @@ for i in pending_rows.index:
 
 driver.quit()
 print("Scraping complete and Google Sheet updated.")
-
